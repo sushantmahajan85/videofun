@@ -1,0 +1,100 @@
+<head>
+    <title>OnelChat</title>
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@0.3.20/dist/peer.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1 class="judul">Welcome to TobyCall</h1>
+    <div>
+        <div class="dot"></span>
+        <h2 class="status">Not Connected</h2>
+    </div>
+    <h3 class="idDisplay"></h3>
+    <button class="connectButton">Connect to Peer</button>
+
+</body>
+<script>
+    //Handle browser prefixes
+    navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
+    var localStream = null;
+    // Get access to microphone
+    navigator.getUserMedia (
+        {video: false, audio: true},
+        
+        // Success callback
+        function success(localAudioStream) {
+            localStream = localAudioStream
+            console.log(localStream)
+            // playStream(localStream)
+        },
+        // Failure callback
+        function error(err) {
+            console.log(err)
+            alert("Audio input device error. Please refresh the website.")
+        }
+    )
+
+    var me = new Peer({
+        config: {'iceServers': [
+            { url: 'stun:stun.l.google.com:19302' },
+            { url: 'turn:not-a-real-server.abc', username: 'peerjs', credential: 'not-a-real-password' }
+        ]}
+    }); //use default PeerJS cloud
+    me.on('open', function() {
+        console.log('My PeerJS ID is:', me.id);
+        $(".idDisplay")[0].innerHTML = me.id;
+        $(".status")[0].innerHTML = "Awaiting Connection"
+        $(".dot")[0].style.backgroundColor = 'gold'
+    });
+
+    var conn = null;
+
+    function connect(connId){
+        console.log("connecting to id ",connId)
+        conn = me.call(connId, localStream);
+        console.log("outgoing stream ",conn)
+        conn.on('stream', function(stream) {
+            playStream(stream)
+            $(".status")[0].innerHTML = "Connected to Peer"
+            $(".dot")[0].style.backgroundColor = 'aquamarine'
+        });
+        conn.on('close',()=>{
+            $(".status")[0].innerHTML = "Awaiting Connection"
+            $(".dot")[0].style.backgroundColor = 'gold'
+        })
+    }
+
+    $(".connectButton").click(
+        ()=>{
+            var connId = prompt("Enter partner ID")
+            connect(connId)
+        }
+    )
+
+    me.on('call', function(incoming) {
+        alert("ada yang call lu")
+        conn = incoming
+        conn.answer(localStream)
+        console.log("incoming stream ",conn)
+        conn.on('stream', function(stream) {
+            playStream(stream)
+        });
+        conn.on('close',()=>{
+            $(".status")[0].innerHTML = "Awaiting Connection"
+            $(".dot")[0].style.backgroundColor = 'gold'
+        })
+        $(".status")[0].innerHTML = "Connected to Peer"
+        $(".dot")[0].style.backgroundColor = 'aquamarine'
+    });
+
+    function playStream(stream) {
+        console.log("play stream")
+        var audio = $('<audio autoplay />').appendTo('body');
+        console.log("created")
+        //audio[0].src = (URL || webkitURL || mozURL).createObjectURL(stream);
+        audio[0].srcObject = stream;
+    }
+
+</script>
+
